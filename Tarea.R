@@ -22,7 +22,7 @@
 if (!require(pacman)) {
   install.packages("pacman")
 }
-pacman::p_load(AER, rlang, ggplot2, WDI, dplyr)
+pacman::p_load(AER, survey,rlang, ggplot2, WDI, dplyr)
 
 # 1. (2 ptos) Escriba un código que le permita calcular el cuadrado 
 #    de los primeros 10 elementos de un vector cualquiera.
@@ -56,8 +56,9 @@ data(CPS1985)
 
 histcps <- function(x) {
   x_var <- sym(x)
+  binwidth <- 2 * IQR(CPS1985[[x]]) / (length(CPS1985[[x]])^(1/3))
   ggplot2::ggplot(CPS1985, ggplot2::aes(x = !!x_var)) +  
-    ggplot2::geom_histogram(ggplot2::aes(y = ..density..)) +
+    ggplot2::geom_histogram(ggplot2::aes(y = after_stat(density)), binwidth = binwidth) +
     ggplot2::facet_grid(
       gender ~ 
         factor(union, c("yes","no"), c("unionized","no unionized")) + 
@@ -67,16 +68,17 @@ histcps <- function(x) {
     ggplot2::ylab("Densidad") 
 }
 
+
 histcps("wage")
 histcps("education")
 histcps("experience")
 histcps("age")
 
+
 # 4. (6 ptos) Utilizando datos provenientes de World Development Indicators para el año 2021:
 #   Use un mapa de África para representar la expectativa de vida al nacer utilizando diferentes colores.
 
 # Base de datos World Development Indicators:
-
 wbData <- WDI(indicator=c("SP.DYN.LE00.IN"), country="all", extra = TRUE, start=2021, end=2021)
 
 wbData <- wbData %>% 
@@ -84,16 +86,19 @@ wbData <- wbData %>%
   rename(lifeExpectancy=SP.DYN.LE00.IN) %>% 
   filter(region!="Aggregates"&region %in% c("Sub-Saharan Africa","Middle East & North Africa"))
 
+country_map <- data.frame(
+  from = c("Cote d'Ivoire", "Cabo Verde", "Congo, Dem. Rep.", "Congo, Rep.", "Egypt, Arab Rep.", "Eswatini", "Gambia, The"),
+  to = c("Ivory Coast", "Cape Verde", "Democratic Republic of the Congo", "Republic of Congo", "Egypt", "Swaziland", "Gambia")
+)
+wbData$country[match(country_map$from, wbData$country)] <- country_map$to
+
 africa<- map_data("world",region = unique(wbData$country))
-
-wbData$country
-
 africaj<-merge(africa,wbData,by.x= "region",by.y="country")
 
 # Mapa región separación por color
 ggplot(africaj, aes(x = long, y = lat, group = group, fill = lifeExpectancy)) +
-  geom_polygon(colour = "black") + coord_map("mercator")
-
+  geom_polygon(colour = "black") + coord_map("mercator") +
+  scale_fill_gradient(low = "red", high = "green")
 # 5. (2 ptos) Cree un objeto de diseño de muestreo con la base CASEN 2020
 temp <- tempfile() #Creamos un archivo temporal
 download.file("http://observatorio.ministeriodesarrollosocial.gob.cl/storage/docs/casen/2020/Casen_en_Pandemia_2020_revisada202209.sav.zip",temp) #descargamos los datos
@@ -108,17 +113,18 @@ casen20w<-svydesign(ids = ~varunit,
 #  El gráfico debe contener título y nombre de los ejes en caso que corresponda 
 
 # Crear tabla de frecuencias y convertirla en dataframe
-tabla <- svytable(~haven::as_factor(pobreza), casen20w) %>% 
-  prop.table() * 100 
-df <- as.data.frame(tabla)
-
-# Renombrar las columnas
-colnames(df) <- c("Pobreza", "Porcentaje")
+tabla <- svytable(~factor(pobreza), casen20w) %>% 
+  as.data.frame() %>%
+  setNames(c("Pobreza", "Frecuencia")) %>%
+  mutate(Porcentaje = Frecuencia / sum(Frecuencia) * 100)
 
 # Crear el gráfico
-ggplot2::ggplot(df, aes(x = Pobreza, y = Porcentaje)) +
-  geom_bar(stat = "identity",fill ="steelblue") +
+ggplot(tabla, aes(Pobreza, Porcentaje)) +
+  geom_bar(stat = "identity", fill ="steelblue") +
   geom_text(aes(label = round(Porcentaje, 1)), vjust = -0.4) +
-  ggtitle("Porcentaje de pobreza por tipo") +
-  xlab("Situación de pobreza") +
-  ylab("Porcentaje") 
+  labs(title = "Porcentaje de pobreza por tipo", x = "Situación de pobreza", y = "Porcentaje")
+
+
+
+
+
