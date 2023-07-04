@@ -22,7 +22,7 @@
 if (!require(pacman)) {
   install.packages("pacman")
 }
-pacman::p_load(AER, survey,rlang, ggplot2, WDI, dplyr)
+pacman::p_load(haven,AER, survey,rlang, ggplot2, WDI, dplyr)
 
 # 1. (2 ptos) Escriba un código que le permita calcular el cuadrado 
 #    de los primeros 10 elementos de un vector cualquiera.
@@ -55,10 +55,10 @@ outer(1:30, 1:30)
 data(CPS1985)
 
 histcps <- function(x) {
-  x_var <- sym(x)
+  x_var <- rlang::sym(x)
   binwidth <- 2 * IQR(CPS1985[[x]]) / (length(CPS1985[[x]])^(1/3))
   ggplot2::ggplot(CPS1985, ggplot2::aes(x = !!x_var)) +  
-    ggplot2::geom_histogram(ggplot2::aes(y = after_stat(density)), binwidth = binwidth) +
+    ggplot2::geom_histogram(ggplot2::aes(y = ggplot2::after_stat(density)), binwidth = binwidth,fill ="steelblue") +
     ggplot2::facet_grid(
       gender ~ 
         factor(union, c("yes","no"), c("unionized","no unionized")) + 
@@ -99,6 +99,7 @@ africaj<-merge(africa,wbData,by.x= "region",by.y="country")
 ggplot(africaj, aes(x = long, y = lat, group = group, fill = lifeExpectancy)) +
   geom_polygon(colour = "black") + coord_map("mercator") +
   scale_fill_gradient(low = "red", high = "green")
+
 # 5. (2 ptos) Cree un objeto de diseño de muestreo con la base CASEN 2020
 temp <- tempfile() #Creamos un archivo temporal
 download.file("http://observatorio.ministeriodesarrollosocial.gob.cl/storage/docs/casen/2020/Casen_en_Pandemia_2020_revisada202209.sav.zip",temp) #descargamos los datos
@@ -113,7 +114,7 @@ casen20w<-svydesign(ids = ~varunit,
 #  El gráfico debe contener título y nombre de los ejes en caso que corresponda 
 
 # Crear tabla de frecuencias y convertirla en dataframe
-tabla <- svytable(~factor(pobreza), casen20w) %>% 
+tabla <- svytable(~as_factor(pobreza), casen20w) %>% 
   as.data.frame() %>%
   setNames(c("Pobreza", "Frecuencia")) %>%
   mutate(Porcentaje = Frecuencia / sum(Frecuencia) * 100)
@@ -122,7 +123,7 @@ tabla <- svytable(~factor(pobreza), casen20w) %>%
 ggplot(tabla, aes(Pobreza, Porcentaje)) +
   geom_bar(stat = "identity", fill ="steelblue") +
   geom_text(aes(label = round(Porcentaje, 1)), vjust = -0.4) +
-  labs(title = "Porcentaje de pobreza por tipo", x = "Situación de pobreza", y = "Porcentaje")
+  labs(title = "Porcentaje de pobreza según tipo", x = "Situación de pobreza", y = "Porcentaje")
 
 
 
