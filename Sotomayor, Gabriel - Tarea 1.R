@@ -93,7 +93,9 @@ country_map <- data.frame(
 wbData$country[match(country_map$from, wbData$country)] <- country_map$to
 
 africa<- map_data("world",region = unique(wbData$country))
-africaj<-merge(africa,wbData,by.x= "region",by.y="country")
+africaj<-merge(africa,wbData,by.x= "region",by.y="country") %>% 
+  filter(!region %in%  c("Bahrain", "Iraq", "Israel", "Jordan", "Kuwait", "Lebanon", "Malta", "Oman", "Qatar", "Saudi Arabia", "United Arab Emirates"))
+
 
 # Mapa región separación por color
 ggplot(africaj, aes(x = long, y = lat, group = group, fill = lifeExpectancy)) +
@@ -123,7 +125,8 @@ tabla <- svytable(~as_factor(pobreza), casen20w) %>%
 ggplot(tabla, aes(Pobreza, Porcentaje)) +
   geom_bar(stat = "identity", fill ="steelblue") +
   geom_text(aes(label = round(Porcentaje, 1)), vjust = -0.4) +
-  labs(title = "Porcentaje de pobreza según tipo", x = "Situación de pobreza", y = "Porcentaje")
+  labs(title = "Porcentaje de pobreza según tipo", x = "Situación de pobreza", y = "Porcentaje")+
+  theme_classic()
 
 
 
